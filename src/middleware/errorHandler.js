@@ -1,11 +1,3 @@
-const notFoundHandler = (req, res) => {
-  res.status(404).json({
-    success: false,
-    error: "Route not found",
-    message: `${req.method} ${req.originalUrl} does not exist`,
-  });
-};
-
 const errorHandler = (err, req, res, next) => {
   console.error(err.stack);
 
@@ -14,4 +6,4 @@ const errorHandler = (err, req, res, next) => {
     ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 };
-module.exports = { errorHandler, notFoundHandler };
+module.exports = { errorHandler };

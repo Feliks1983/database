@@ -2,9 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const apiRouter = require("./routes/todos");
-const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
-const { requestLogger } = require("./middleware/requestLogger");
-const { getConnectionStatus, connectDB } = require("./config/database");
+const { errorHandler } = require("./middleware/errorHandler");
+const { connectDB } = require("./config/database");
 
 dotenv.config();
 
@@ -18,17 +17,30 @@ const config = {
 
 app.use(cors({ origin: config.corsOrigin }));
 app.use(express.json());
-app.use(requestLogger);
 
-app.get("/health", (req, res) => {
-  const dbStatus = getConnectionStatus();
+app.get("/health", async (req, res) => {
+  try {
+    const dbStatus = await connectDB();
 
-  res.status(dbStatus.connected ? 200 : 500).json({
-    success: dbStatus.connected,
-    status: dbStatus.connected ? "OK" : "NOT",
-    database: dbStatus,
-    timestamp: new Date().toISOString(),
-  });
+    res.status(200).json({
+      success: true,
+      status: "OK",
+      database: {
+        connected: dbStatus.connected,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      status: "NOT",
+      database: {
+        connected: false,
+      },
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 app.get("/", (req, res) => {
   res.json({
@@ -43,7 +55,6 @@ app.get("/", (req, res) => {
   });
 });
 app.use("/api/todos", apiRouter);
-app.use(notFoundHandler);
 app.use(errorHandler);
 app.use((req, res) => {
   res.status(404).json({
@@ -59,12 +70,8 @@ async function startServer() {
 
     app.listen(config.port, () => {
       console.log(
-        `Server running on port ${config.port} in ${config.nodeEnv} mode`,
+        `Server running on port ${config.port}`,
       );
-
-      console.log(`API: http://localhost:${config.port}`);
-
-      console.log(`Todos: http://localhost:${config.port}/api/todos`);
     });
   } catch (error) {
     console.error("Failed to start server:", error);
